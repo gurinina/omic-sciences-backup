@@ -1,0 +1,439 @@
+# Linear Algebra
+
+The Rmd file for this section is
+available [here](https://github.com/gurinina/omic_sciences/blob/main/04-linear-algebra.Rmd). In this course we try to minimize mathematical notation as much as possible. Furthermore, we avoid using calculus to motivate statistical concepts. However, Matrix Algebra (also referred to as Linear Algebra) and its mathematical notation greatly facilitates the exposition of the advanced data analysis techniques covered in the remainder of this book. Moreover, it is fundamental to understanding linear models and exposing the detail behind R functions. We therefore dedicate a chapter of this book to introducing Matrix Algebra. We do this in the context of data analysis and using one of the main applications: Linear Models.
+
+We will describe three examples from the life sciences: one from physics, one related to genetics, and one from a mouse experiment. They are very different, yet we end up using the same statistical technique: fitting linear models. Linear models are typically taught and described in the language of matrix algebra. 
+
+```{r echo=FALSE}
+library(rafalib)
+```
+
+## Motivating Examples
+
+### Falling objects:
+Imagine you are Galileo in the 16th century trying to describe the velocity of a falling object. An assistant climbs the Tower of Pisa and drops a ball, while several other assistants record the position at different times. Let's simulate some data using the equations we know today and adding some measurement error:
+
+```{r simulate_drop_data}
+g <- 9.8 ##meters per second
+n <- 25
+tt <- seq(0,3.4,len=n) ##time in secs, t is a base function
+f <- 56.67  - 0.5*g*tt^2
+y <-  f + rnorm(n,sd=1)
+```
+
+The assistants hand the data to Galileo and this is what he sees:
+
+```{r simulate_drop_data_with_fit, fig.cap="Fitted model for simulated data for distance travelled versus time of falling object measured with error."}
+mypar()
+par(pch=19)
+plot(tt,y,ylab="Distance in meters",xlab="Time in seconds")
+lines(tt,f,col=2)
+```
+
+He does not know the exact equation, but by looking at the plot above he deduces that the position should follow a parabola. So he models the data with:
+
+$$ Y_i = \beta_0 + \beta_1 x_i + \beta_2 x_i^2 + \varepsilon_i, i=1,\dots,n $$
+
+With $Y_i$ representing location, $x_i$ representing the time, and $\varepsilon_i$ accounting for measurement error. This is a linear model because it is a linear combination of known quantities (the $x$'s) referred to as predictors or covariates and unknown parameters (the $\beta$'s).
+
+Thanks to high school, we know that the equation for the trajectory of a falling object is: 
+
+$$d = h_0 + v_0 t -  0.5 \times 9.8 t^2$$
+with $h_0$ and $v_0$ the starting height and velocity respectively. The data we simulated above followed this equation and added measurement error to simulate `n` observations for dropping the ball $(v_0=0)$ from the tower of Pisa $(h_0=56.67)$. 
+
+How do we estimate the covariates?
+
+#### The `lm` function
+
+In R we can fit this model by simply using the `lm` function. We will describe this function in detail later, but here is a preview:
+
+```{r}
+tt2 <-tt^2
+fit <- lm(y~tt+tt2)
+summary(fit)$coef
+```
+
+It gives us the least squares estimate, as well as standard errors and p-values. The quantity obtained when evaluating the least squares equation at the estimates is called the residual sum of squares (RSS). 
+
+The main part of what we do in this section is to explain the mathematics behind this function. 
+
+Let's look at the output for a second to understand it.
+
+```{r}
+fit$coefficients
+
+
+```
+We can use the coefficients to calculate the residual sum of the squares, which is the error left over when evaluating the LSE equation. In other words, evaluating the accuracy of the prediction. To predict y, we just take the coefficients and plug them back into our equation:
+
+```{r}
+fit$model
+fit$fitted.values
+plot(fit)
+ypred = fit$coefficients[1]+fit$coefficients[2]*tt+fit$coefficients[3]*tt^2
+```
+
+
+### Father & son heights
+Now imagine you are Francis Galton in the 19th century and you collect paired height data from fathers and sons. You suspect that height is inherited. Your data:
+
+```{r,message=FALSE}
+data(father.son,package="UsingR")
+x=father.son$fheight
+y=father.son$sheight
+```
+
+looks like this:
+
+```{r galton_data, fig.cap="Galton's data. Son heights versus father heights."}
+par(pch=19)
+plot(x,y,xlab="Father's height",ylab="Son's height")
+abline(a=0,b=1)
+
+```
+
+The sons' heights do seem to increase linearly with the fathers' heights. In this case, a model that describes the data is as follows:
+
+$$ Y_i = \beta_0 + \beta_1 x_i + \varepsilon_i, i=1,\dots,N $$
+
+This is also a linear model with $x_i$ and $Y_i$, the father and son heights respectively, for the $i$-th pair and $\varepsilon_i$ a term to account for the extra variability. Here we think of the fathers' heights as the predictor and being fixed (not random) so we use lower case. Measurement error alone can't explain all the variability seen in $\varepsilon_i$. This makes sense as there are other variables not in the model, for example, mothers' heights, genetic randomness, and environmental factors.
+
+### Random samples from multiple populations
+
+Here we read-in mouse body weight data from mice that were fed two different diets: high fat and control (chow). We have a random sample of 12 mice for each. We are interested in determining if the diet has an effect on weight. Here is the data:
+
+
+```{r, echo=FALSE}
+library(downloader)
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
+filename <- "femaleMiceWeights.csv"
+if (!file.exists(filename)) download(url,destfile=filename)
+```
+
+```{r mice_weights,fig.cap="Mouse weights under two diets."}
+dat <- read.csv("femaleMiceWeights.csv")
+mypar(1,1)
+stripchart(Bodyweight~Diet,data=dat,vertical=TRUE,method="jitter",pch=19,main="Mice weights")
+```
+
+We want to estimate the difference in average weight between populations. We can do this using t-tests and confidence intervals, based on the difference in sample averages. We can obtain the same exact results using a linear model:
+
+$$ Y_i = \beta_0 + \beta_1 x_{i} + \varepsilon_i$$
+
+with $\beta_0$ the chow diet average weight, $\beta_1$ the difference between averages, $x_i = 1$ when mouse $i$ gets the high fat (hf) diet, $x_i = 0$ when it gets the chow diet, and $\varepsilon_i$ explains the differences between mice of the same population. 
+ 
+
+#### Linear models in general
+
+We have seen three very different examples in which linear models can be used. A general model that encompasses all of the above examples is the following:
+
+$$ Y_i = \beta_0 + \beta_1 x_{i,1} + \beta_2 x_{i,2} + \dots +  \beta_2 x_{i,p} + \varepsilon_i, i=1,\dots,n $$
+
+ 
+$$ Y_i = \beta_0 + \sum_{j=1}^p \beta_j x_{i,j} + \varepsilon_i, i=1,\dots,n $$
+
+Note that we have a general number of predictors $p$. Matrix algebra provides a compact language and mathematical framework to compute and make derivations with any linear model that fits into the above framework.
+
+### Estimating parameters
+
+For the models above to be useful we have to estimate the unknown $\beta$ s. In the first example, we want to describe a physical process for which we can't have unknown parameters. In the second example, we better understand inheritance by estimating how much, on average, the father's height affects the son's height. In the final example, we want to determine if there is in fact a difference: if $\beta_1 \neq 0$. 
+
+The standard approach in science is to find the values that minimize the distance of the fitted model to the data. The following is called the least squares (LS) equation and we will see it often in this chapter:
+
+$$ \sum_{i=1}^n \left\{  Y_i - \left(\beta_0 + \sum_{j=1}^p \beta_j x_{i,j}\right)\right\}^2 $$
+
+Once we find the minimum, we will call the values the least squares estimates (LSE) and denote them with $\hat{\beta}$. The quantity obtained when evaluating the least squares equation at the estimates is called the residual sum of squares (RSS). Since all these quantities depend on $Y$, *they are random variables*. The $\hat{\beta}$ s are random variables and we will eventually perform inference on them.
+
+
+
+## Matrix Notation
+
+Here we introduce the basics of matrix notation. Initially this may seem over-complicated, but once we discuss examples, you will appreciate the power of using this notation to both explain and derive solutions, as well as implement them as R code. 
+
+**The language of linear models**
+
+Linear algebra notation actually simplifies the mathematical descriptions and manipulations of linear models, as well as coding in R. We will discuss the basics of this notation and then show some examples in R.
+
+The main point of this entire exercise is to show how we can write the models above using matrix notation, and then explain how this is useful for solving the least squares equation. We start by simply defining notation and matrix multiplication, but bear with us since we eventually get back to the practical application.
+
+
+
+
+
+We can see that `c(3,2,1)` is not a solution as the answer here is not the required `c(6,2,1)`.
+
+To get the solution, we will need to invert the matrix on the left, a concept we learn about below.
+
+Here is the general definition of matrix multiplication of matrices $A$ and $X$:
+
+$$
+\mathbf{AX} = \begin{pmatrix}
+  a_{1,1} & a_{1,2} & \dots & a_{1,N}\\
+  a_{2,1} & a_{2,2} & \dots & a_{2,N}\\
+  & & \vdots & \\
+  a_{M,1} & a_{M,2} & \dots & a_{M,N}
+\end{pmatrix}
+\begin{pmatrix}
+  x_{1,1}&\dots & x_{1,p} \\
+  x_{2,1}&\dots & x_{2,p} \\
+   & \vdots & \\
+  x_{N,1}&\dots & x_{N,p} 
+  \end{pmatrix}
+$$
+  
+$$  = \begin{pmatrix}
+  \sum_{i=1}^N a_{1,i} x_{i,1} & \dots & \sum_{i=1}^N a_{1,i} x_{i,p}\\
+  & \vdots & \\
+  \sum_{i=1}^N a_{M,i} x_{i,1} & \dots & \sum_{i=1}^N a_{M,i} x_{i,p}
+\end{pmatrix}
+$$
+
+You can only take the product if the number of columns of the first matrix $A$ equals the number of rows of the second one $X$. Also, the final matrix has the same row numbers as the first $A$ and the same column numbers as the second $X$. 
+
+After you study the example below, you may want to come back and re-read the sections above.
+
+**The identity matrix**
+
+The identity matrix is analogous to the number 1: if you multiply the identity matrix by another matrix, you get the same matrix. For this to happen, we need it to be like this:
+
+$$
+\mathbf{I} = \begin{pmatrix}
+1&0&0&\dots&0&0\\
+0&1&0&\dots&0&0\\
+0&0&1&\dots&0&0\\
+\vdots &\vdots & \vdots&\ddots&\vdots&\vdots\\
+0&0&0&\dots&1&0\\
+0&0&0&\dots&0&1
+\end{pmatrix}
+$$
+
+By this definition, the identity always has to have the same number of rows as columns or be what we call a square matrix.
+
+If you follow the matrix multiplication rule above, you notice this works out:
+
+$$
+\mathbf{XI} = 
+\begin{pmatrix}
+   x_{1,1} & \dots &  x_{1,p}\\
+  & \vdots & \\
+   x_{N,1} & \dots &   x_{N,p}
+\end{pmatrix}
+\begin{pmatrix}
+1&0&0&\dots&0&0\\
+0&1&0&\dots&0&0\\
+0&0&1&\dots&0&0\\
+ & & &\vdots& &\\
+0&0&0&\dots&1&0\\
+0&0&0&\dots&0&1
+\end{pmatrix} = 
+\begin{pmatrix}
+   x_{1,1} & \dots &  x_{1,p}\\
+  & \vdots & \\
+   x_{N,1} & \dots & x_{N,p}
+\end{pmatrix}
+$$
+
+
+In R you can form an identity matrix this way:
+```{r}
+n <- 5 #pick dimensions
+diag(n)
+```
+**The inverse**
+
+The inverse of matrix $X$, denoted with $X^{-1}$, has the property that, when multiplied, gives you the identity $X^{-1}X=I$. Of course, not all matrices have inverses. For example, a $2\times 2$ matrix with 1s in all its entries does not have an inverse. 
+
+As we will see when we get to the section on applications to linear models, being able to compute the inverse of a matrix is quite useful. A very convenient aspect of R is that it includes a predefined function `solve` to do this. Here is how we would use it to solve the linear of equations:
+
+```{r}
+X <- matrix(c(1,3,2,1,-2,1,1,1,-1),3,3)
+y <- matrix(c(6,2,1),3,1)
+solve(X)%*%y #equivalent to solve(X,y)
+```
+
+Please note that `solve` is a function that should be used with caution as it is not generally numerically stable. 
+
+88888888888888888888888888888888888888888888888888888888888888
+
+**Linear models**
+
+Now we are ready to put all this to use. Let's start with Galton's example. If we define these matrices:
+ 
+$$
+\mathbf{Y} = \begin{pmatrix}
+Y_1\\
+Y_2\\
+\vdots\\
+Y_N
+\end{pmatrix}
+,
+\mathbf{X} = \begin{pmatrix}
+1&x_1\\
+1&x_2\\
+\vdots\\
+1&x_N
+\end{pmatrix}
+,
+\mathbf{\beta} = \begin{pmatrix}
+\beta_0\\
+\beta_1
+\end{pmatrix} \mbox{ and }
+\mathbf{\varepsilon} = \begin{pmatrix}
+\varepsilon_1\\
+\varepsilon_2\\
+\vdots\\
+\varepsilon_N
+\end{pmatrix}
+$$
+
+
+
+**Then we can write the model**:
+
+$$ 
+Y_i = \beta_0 + \beta_1 x_i + \varepsilon_i, i=1,\dots,N 
+$$
+
+**as:**
+
+
+$$
+\,
+\begin{pmatrix}
+Y_1\\
+Y_2\\
+\vdots\\
+Y_N
+\end{pmatrix} = 
+\begin{pmatrix}
+1&x_1\\
+1&x_2\\
+\vdots\\
+1&x_N
+\end{pmatrix}
+\begin{pmatrix}
+\beta_0\\
+\beta_1
+\end{pmatrix} +
+\begin{pmatrix}
+\varepsilon_1\\
+\varepsilon_2\\
+\vdots\\
+\varepsilon_N
+\end{pmatrix}
+$$
+
+**or simply:** 
+
+$$
+\mathbf{Y}=\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon}
+$$
+
+**which is a much simpler way to write it.**
+
+
+The least squares equation becomes simpler as well since it is the following cross-product:
+
+$$
+(\mathbf{Y}-\mathbf{X}\boldsymbol{\beta})^\top
+(\mathbf{Y}-\mathbf{X}\boldsymbol{\beta})
+$$
+
+So now we are ready to determine which values of $\beta$ minimize the above, which we  can do  using calculus to find the minimum. 
+
+**Advanced: Finding the minimum using calculus**
+
+There are a series of rules that permit us to compute partial derivative equations in matrix notation. By equating the derivative to 0 and solving for the $\beta$, we will have our solution. The only one we need here tells us that the derivative of the above equation is:
+
+$$
+2 \mathbf{X}^\top (\mathbf{Y} - \mathbf{X} \boldsymbol{\hat{\beta}})=0
+$$
+
+$$
+\mathbf{X}^\top \mathbf{X} \boldsymbol{\hat{\beta}} = \mathbf{X}^\top \mathbf{Y}   
+$$
+
+
+$$
+\boldsymbol{\hat{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y}   
+$$
+
+and we have our solution. We usually put a hat on the $\beta$ that solves this, $\hat{\beta}$ , as it is an estimate of the "real" $\beta$ that generated the data.
+
+Remember that the least squares are like a square (multiply something by itself) and that this formula is similar to the derivative of $f(x)^2$ being $2f(x)f\prime (x)$. 
+
+
+**Finding LSE in R**
+
+Let's see how it works in R:
+
+```{r}
+data(father.son,package="UsingR")
+x=father.son$fheight
+y=father.son$sheight
+X <- cbind(1,x)
+betahat <- solve( t(X) %*% X ) %*% t(X) %*% y
+###or
+betahat <- solve( crossprod(X) ) %*% crossprod( X, y )
+```
+
+
+Now we can see the results of this by computing the estimated $\hat{\beta}_0+\hat{\beta}_1 x$ for any value of $x$:
+
+```{r galton_regression_line, fig.cap="Galton's data with fitted regression line."}
+newx <- seq(min(x),max(x),len=100)
+X <- cbind(1,newx)
+fitted <- X%*%betahat
+plot(x,y,xlab="Father's height",ylab="Son's height")
+lines(newx,fitted,col=2)
+```
+
+This $\hat{\boldsymbol{\beta}}=(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y}$ is one of the most widely used results in data analysis. One of the advantages of this approach is that we can use it in many different situations.  For example, in our falling object problem: 
+ 
+```{r}
+set.seed(1)
+g <- 9.8 #meters per second
+n <- 25
+tt <- seq(0,3.4,len=n) #time in secs, t is a base function
+d <- 56.67  - 0.5*g*tt^2 + rnorm(n,sd=1)
+```
+
+Notice that we are using almost the same exact code:
+
+
+```{r gravity_with_fitted_parabola, fig.cap="Fitted parabola to simulated data for distance travelled versus time of falling object measured with error."}
+X <- cbind(1,tt,tt^2)
+y <- d
+betahat <- solve(crossprod(X))%*%crossprod(X,y)
+newtt <- seq(min(tt),max(tt),len=100)
+X <- cbind(1,newtt,newtt^2)
+fitted <- X%*%betahat
+plot(tt,y,xlab="Time",ylab="Height")
+lines(newtt,fitted,col=2)
+
+```
+
+
+And the resulting estimates are what we expect:
+
+```{r}
+betahat
+```
+
+**The `lm` Function**
+R has a very convenient function that fits these models. We will learn more about this function later, but here is a preview:
+
+```{r}
+X <- cbind(tt,tt^2)
+fit=lm(y~X)
+summary(fit)
+```
+
+Note that we obtain the same values as above. Don't be worried if you didn't completely get this, we're going to revisit it in the next sections.
+
+**Summary**
+
+We have shown how to write linear models using linear algebra. We are going to do this for several examples, many of which are related to designed experiments. We also demonstrated how to obtain least squares estimates. Nevertheless, it is important to remember that because $y$ is a random variable, these estimates are random as well. In a later section, we will learn how to compute standard error for these estimates and use this to perform inference.
+
+

@@ -1,0 +1,524 @@
+# Linear modeling genomics
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Inference: the process of reaching a conclusion from known facts. 
+
+```{r,results=FALSE,echo=FALSE}
+set.seed(1) #so that we get same results
+```
+
+The data introduced here is from a paper entitled The High-Fat Diet–Fed Mouse: A Model for Studying Mechanisms and Treatment of Impaired Glucose Tolerance and Type 2 Diabetes where they try and show that the mouse is a good model for studying diabetes and development of new treatments. the statistical concepts necessary to understand p-values and confidence intervals. These terms are ubiquitous in the life science literature. We'll use [this paper](https://doi.org/10.2337/diabetes.53.suppl_3.s215) as an example of . 
+
+Note that the abstract has this statement: 
+
+> "Body weight was higher in mice fed the high-fat diet already after the first week, due to higher dietary intake in combination with lower metabolic efficiency." 
+
+To support this claim they provide the following in the results section:
+
+> "Already during the first week after introduction of high-fat diet, body weight increased significantly more in the high-fat diet-fed mice ($+$ 1.6 $\pm$ 0.1 g) than in the normal diet-fed mice ($+$ 0.2 $\pm$ 0.1 g; P < 0.001)."
+
+What does P < 0.001 mean? What are the $\pm$ included?
+We will learn what this means and learn to compute these values in
+R. The first step is to understand random variables. To do
+this, we will use data from a mouse database (provided by Karen
+Svenson via Gary Churchill and Dan Gatti and partially funded by P50
+GM070683). We will import the data into R and explain random variables
+and null distributions using R programming. 
+
+If you already downloaded the `femaleMiceWeights` file into your working directory, you can read it into R with just one line:
+
+```{r echo=FALSE, results="hide"}
+library(downloader) ##use install.packages to install
+dir <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/"
+filename <- "femaleMiceWeights.csv"
+url <- paste0(dir, filename)
+if (!file.exists(filename)) download(url, destfile = filename)
+```
+
+```{r}
+dat <- read.csv("femaleMiceWeights.csv")
+```
+
+Remember that a quick way to read the data, without downloading it is by using the url:
+
+```{r,eval=FALSE}
+dir <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/"
+filename <- "femaleMiceWeights.csv"
+url <- paste0(dir, filename)
+dat <- read.csv(url)
+```
+
+** Our first look at data **
+
+We are interested in determining if following a given diet makes mice
+heavier after several weeks. This data was produced by ordering 24
+mice from The Jackson Lab and randomly assigning either chow or high
+fat (hf) diet. After several weeks, the scientists weighed each mouse
+and obtained this data (`head` just shows us the first 6 rows):
+
+```{r}
+head(dat) 
+``` 
+
+In RStudio, you can view the entire dataset with:
+
+```{r,eval=FALSE}
+View(dat)
+```
+
+So are the hf mice heavier? Mouse 24 at 20.73 grams is one of the
+lightest mice, while Mouse 21 at 34.02 grams is one of the heaviest. Both are on
+the hf diet. Just from looking at the data, we see there is
+*variability*. Claims such as the one above usually refer to the
+averages. So let's look at the average of each group: 
+
+```{r,message=FALSE}
+library(dplyr)
+control <- filter(dat,Diet == "chow") %>% select(Bodyweight) %>% unlist
+treatment <- filter(dat,Diet == "hf") %>% select(Bodyweight) %>% unlist
+print( mean(treatment) )
+print( mean(control) )
+obsdiff <- mean(treatment) - mean(control)
+print(obsdiff)
+```
+
+So the hf diet mice are about 10% heavier. Are we done? Why do we need p-values and confidence intervals? The reason is that these averages are random variables. They can take many values. 
+
+If we repeat the experiment, we obtain 24 new mice from The Jackson Laboratory and, after randomly assigning them to each diet, we get a different mean. Every time we repeat this experiment, we get a different value. We call this type of quantity a *random variable*. 
+
+
+## T.tests
+** We can use a t.test to ask if there is a difference between the treatment and the control **
+```{r}
+t.test(treatment, control, var.equal = TRUE)
+```
+
+To see just the p-value, we can use the `$` extractor:
+
+```{r}
+result <- t.test(treatment,control)
+result$p.value
+```
+
+We can also write this as a linear model:
+
+```{r}
+lm = lm(Bodyweight~Diet,dat)
+summary(lm)
+```
+
+
+## Highthroughput Data
+
+## The data 
+
+We want to move to inference when in comes to high-throughput data. Instead of doing t-tests for indivual datasets, we'll be doing t.tests for every gene in the genome. High-throughput technologies have changed basic biology and the biomedical sciences from data poor disciplines to data intensive ones. A specific example comes from research fields interested in understanding gene expression. The Rmd file for this section is
+available [here](https://github.com/gurinina/omic_sciences/blob/main/05-linear-modeling-genomics.Rmd). Gene expression is the process in which DNA, the blueprint for life, is copied into RNA, the templates for the synthesis of proteins, the building blocks for life. In the 1990s, the analysis of gene expression data amounted to spotting black dots on a piece of paper or extracting a few numbers from standard curves. With high-throughput technologies, such as microarrays, this suddenly changed to sifting through tens of thousands of numbers. More recently, RNA sequencing has further increased data complexity. Biologists went from using their eyes or simple summaries to categorize results, to having thousands (and now millions) of measurements per sample to analyze. In this chapter, we will focus on statistical inference in the context of high-throughput measurements. Specifically, we focus on the problem of detecting differences in groups using statistical tests and quantifying uncertainty in a meaningful way. We also introduce exploratory data analysis techniques that should be used in conjunction with inference when analyzing high-throughput data. 
+
+Since there is a vast number of available public datasets, we use several gene expression examples. Nonetheless, the statistical techniques you will learn have also proven useful in other fields that make use of high-throughput technologies. Technologies such as microarrays, next generation sequencing, fMRI, and mass spectrometry all produce data to answer questions for which what we learn here will be indispensable. 
+
+** Data packages**
+Several of the  examples we are going to use in the following sections are best obtained through R packages. These are available from GitHub and can be installed using the `install_github` function from the `devtools` package. Microsoft Windows users might need to follow [these instructions](https://github.com/genomicsclass/windows) to properly install `devtools`. 
+
+Once `devtools` is installed, you can then install the data packages like this:
+
+```{r,eval=FALSE}
+library(devtools)
+library(GSE5859Subset)
+install_github("genomicsclass/GSE5859Subset")
+```
+
+
+## The three tables in genomics
+
+So a high-throughput experiment is usually defined by three tables: one with the high-throughput measurements (_data_) and two tables with information about the columns (_features_) and rows(_samples_) of this first table respectively.
+
+Most of the data we use as examples in this book are created with high-throughput technologies. These technologies measure thousands of _features_. Examples of features are genes, single base locations of the genome, genomic regions, or image pixel intensities. Each specific measurement product is defined by a specific set of features. For example, a specific gene expression microarray product is defined by the set of genes that it measures. 
+
+A specific study will typically use one product (e.g. microarray) to make measurements on several experimental units, such as individuals. The most common experimental unit will be the individual, but they can also be defined by other entities, for example different parts of a tumor. We often call the experimental units _samples_ following experimental jargon.  
+
+Because a dataset is typically defined by a set of experimental units, samples, and a product defines a fixed set of features, the high-throughput measurements can be stored in an $n \times m$ matrix, with $n$ the number of units and $m$ the number of features. In R, the convention has been to store the transpose of these matrices. 
+
+Here is an example from a gene expression dataset:
+
+```{r}
+library(GSE5859Subset)
+data(GSE5859Subset) ##this loads the three tables
+dim(geneExpression)
+```
+
+We have RNA expression measurements for 8793 genes from blood taken from 24 individuals (the experimental units). For most statistical analyses, we will also need information about the individuals. For example, in this case the data was originally collected to compare gene expression across ethnic groups. However, we have created a subset of this dataset for illustration and separated the data into two groups:
+
+
+```{r}
+dim(sampleInfo)
+head(sampleInfo)
+sampleInfo$group
+```
+
+One of the columns, filenames, permits us to connect the rows of this table to the columns of the measurement table.
+
+```{r}
+match(sampleInfo$filename,colnames(geneExpression))
+```
+
+```{r}
+table(sampleInfo$filename==colnames(geneExpression))
+
+```
+
+Finally, we have a table describing the features:
+
+```{r}
+dim(geneAnnotation)
+head(geneAnnotation)
+names(geneAnnotation)
+```
+
+The table includes an ID that permits us to connect the rows of this table with the rows of the measurement table:
+```{r}
+head(match(geneAnnotation$PROBEID,rownames(geneExpression)))
+```
+The table also includes biological information about the features, namely chromosome location and the gene "name" used by biologists.
+
+8888888888888888888888888888888888888
+
+## The Design Matrix
+
+Here we will show how to use the two R functions, `formula`
+and `model.matrix`, in order to produce *design matrices* (also known as *model matrices*) for a variety of linear models. We will use these design matrices when we model high dimensional data. In the mouse diet examples we wrote the model as
+
+$$ 
+Y_i = \beta_0 + \beta_1 x_i + \varepsilon_i, i=1,\dots,N 
+$$
+
+with $Y_i$ the weights 
+and $x_i$ equal to 1 only when mouse $i$ receives the high fat diet. We use the term _experimental unit_ to $N$ different entities from which we obtain a measurement. In this case, the mice are the experimental units. 
+
+This is the type of variable we will focus on in this chapter. We call them _indicator variables_ since they simply indicate if the experimental unit had a certain characteristic or not. As we described earlier, we can use linear algebra to represent this model:
+
+$$
+\mathbf{Y} = \begin{pmatrix}
+Y_1\\
+Y_2\\
+\vdots\\
+Y_N
+\end{pmatrix}
+,
+\mathbf{X} = \begin{pmatrix}
+1&x_1\\
+1&x_2\\
+\vdots\\
+1&x_N
+\end{pmatrix}
+,
+\boldsymbol{\beta} = \begin{pmatrix}
+\beta_0\\
+\beta_1
+\end{pmatrix} \mbox{ and }
+\boldsymbol{\varepsilon} = \begin{pmatrix}
+\varepsilon_1\\
+\varepsilon_2\\
+\vdots\\
+\varepsilon_N
+\end{pmatrix}
+$$
+
+
+
+as: 
+
+
+$$
+\,
+\begin{pmatrix}
+Y_1\\
+Y_2\\
+\vdots\\
+Y_N
+\end{pmatrix} = 
+\begin{pmatrix}
+1&x_1\\
+1&x_2\\
+\vdots\\
+1&x_N
+\end{pmatrix}
+\begin{pmatrix}
+\beta_0\\
+\beta_1
+\end{pmatrix} +
+\begin{pmatrix}
+\varepsilon_1\\
+\varepsilon_2\\
+\vdots\\
+\varepsilon_N
+\end{pmatrix}
+$$
+
+or simply: 
+
+$$
+\mathbf{Y}=\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon}
+$$
+
+The design matrix is the matrix $\mathbf{X}$.
+
+Once we define a design matrix, we are ready to find the least squares estimates. We refer to this as _fitting the model_. For fitting linear models in R, we will directly provide a _formula_ to the `lm` function. In this script, we will use the `model.matrix` function, which is used internally by the `lm` function. This will help us to connect the R `formula` with the matrix $\mathbf{X}$. It will therefore help us interpret the results from `lm`.
+
+## Choice of design
+
+The choice of design matrix is a critical step in linear modeling since it encodes which coefficients will be fit in the model, as well as the inter-relationship between the samples. A common misunderstanding is that the choice of design follows straightforward from a description of which samples were included in the experiment. This is not the case. The basic information about each sample (whether control or treatment group, experimental batch, etc.) does not imply a single 'correct' design matrix. The design matrix additionally encodes various assumptions about how the variables in $\mathbf{X}$ explain the observed values in $\mathbf{Y}$, on which the investigator must decide.
+
+For the examples we cover here, we use linear models to make comparisons between different groups. Hence, the design matrices that we ultimately work with will have at least two columns: an _intercept_ column, which consists of a column of 1's, and a second column, which specifies which samples are in a second group. In this case, two coefficients are fit in the linear model: the intercept, which represents the population average of the first group, and a second coefficient, which represents the difference between the population averages of the second group and the first group. The latter is typically the coefficient we are interested in when we are performing statistical tests: we want to know if there is a difference between the two groups. Very often these come from the sampleInfo table in a summarized experiment.
+
+We encode this experimental design in R with two pieces. We start with a formula with the tilde symbol `~`. This means that we want to model the observations using the variables to the right of the tilde. Then we put the name of a variable, which tells us which samples are in which group.
+
+Let's try an example. Suppose we have two groups, control and high fat diet, with two samples each. For illustrative purposes, we will code these with 1 and 2 respectively. We should first tell R that these values should not be interpreted numerically, but as different levels of a *factor*. We can then use the paradigm `~ group` to, say, model on the variable `group`.
+
+```{r}
+group <- factor( c(1,1,2,2) )
+model.matrix(~ group)
+```
+
+(Don't worry about the `attr` lines printed beneath the matrix. We won't be using this information.)
+
+What about the `formula` function? We don't have to include this. By starting an expression with `~`, it is equivalent to telling R that the expression is a formula:
+
+```{r}
+model.matrix(formula(~ group))
+```
+
+What happens if we don't tell R that `group` should be interpreted as a factor?
+
+```{r}
+group <- c(1,1,2,2)
+model.matrix(~ group)
+```
+
+This is **not** the design matrix we wanted, and the reason is that we provided a numeric variable as opposed to an _indicator_ to the `formula` and `model.matrix` functions, without saying that these numbers actually referred to different groups. We want the second column to have only 0 and 1, indicating group membership.
+
+A note about factors: the names of the levels are irrelevant to `model.matrix` and `lm`. All that matters is the order. For example:
+
+```{r}
+group <- factor(c("control","control","highfat","highfat"))
+model.matrix(~ group)
+```
+
+produces the same design matrix as our first code chunk.
+
+### More groups
+
+Using the same formula, we can accommodate modeling more groups. Suppose we have a third diet:
+
+```{r}
+group <- factor(c(1,1,2,2,3,3))
+model.matrix(~ group)
+```
+
+Now we have a third column which specifies which samples belong to the third group.
+
+An alternate formulation of design matrix is possible by specifying `+ 0` in the formula:
+
+```{r}
+group <- factor(c(1,1,2,2,3,3))
+model.matrix(~ group + 0)
+```
+
+This group now fits a separate coefficient for each group. We will explore this design in more depth later on.
+
+** More variables **
+
+We have been using a simple case with just one variable (diet) as an example. In the life sciences, it is quite common to perform experiments with more than one variable. For example, we may be interested in the effect of diet and the difference in sexes. In this case, we have four possible groups:
+
+```{r}
+diet <- factor(c(1,1,1,1,2,2,2,2))
+sex <- factor(c("f","f","m","m","f","f","m","m"))
+table(diet,sex)
+```
+
+If we assume that the diet effect is the same for males and females (this is an assumption), then our linear model is:
+
+$$
+Y_{i}= \beta_0 + \beta_1 x_{i,1} + \beta_2 x_{i,2} + \varepsilon_i 
+$$
+
+To fit this model in R, we can simply add the additional variable with a `+` sign in order to build a design matrix which fits based on the information in additional variables:
+
+```{r}
+diet <- factor(c(1,1,1,1,2,2,2,2))
+sex <- factor(c("f","f","m","m","f","f","m","m"))
+model.matrix(~ diet + sex)
+```
+
+The design matrix includes an intercept, a term for `diet` and a term for `sex`. We would say that this linear model accounts for differences in both the group and condition variables. However, as mentioned above, the model assumes that the diet effect is the same for both males and females. We say these are an _additive_ effect. For each variable, we add an effect regardless of what the other is. Another model is possible here, which fits an additional term and which encodes the potential interaction of group and condition variables. We will cover interaction terms in depth in a later script.
+
+The interaction model can be written in either of the following two formulas:
+
+```{r,eval=FALSE}
+model.matrix(~ diet + sex + diet:sex)
+```
+
+or 
+
+```{r}
+model.matrix(~ diet*sex)
+```
+
+** Releveling **
+
+The level which is chosen for the *reference level* is the level which is contrasted against.  By default, this is simply the first level alphabetically. We can specify that we want group 2 to be the reference level by either using the `relevel` function:
+
+```{r}
+group <- factor(c(1,1,2,2))
+group <- relevel(group, "2")
+model.matrix(~ group)
+```
+
+or by providing the levels explicitly in the `factor` call:
+```{r}
+group <- factor(group, levels = c("1","2"))
+model.matrix(~ group)
+```
+
+maybe more clear using treated vs untreated...
+8888888888888888888888888888888888888
+
+## Linear Regression in practice
+Linear regression is used to predict the value of an outcome variable Y based on one or more input predictor variables X. The aim is to establish a linear relationship (a mathematical formula) between the predictor variable(s) and the response variable, so that, we can use this formula to estimate the value of the response Y, when only the predictors (Xs) values are known.
+
+Introduction
+The aim of linear regression is to model a continuous variable Y as a mathematical function of one or more X variable(s), so that we can use this regression model to predict the Y when only the X is known. This mathematical equation can be generalized as follows:
+
+$$ \mathbf{Y} = {\beta1} + {\beta2}\mathbf{X} + {\epsilon} $$
+
+
+where, β1 is the intercept and β2 is the slope. Collectively, they are called regression coefficients. ϵ is the error term, the part of Y the regression model is unable to explain.
+
+
+8888888888888888888888888888888888888
+
+## The mouse diet example revisited
+
+We will demonstrate how to analyze the high fat diet data using linear models instead of directly applying a t-test. We will demonstrate how ultimately these two approaches are equivalent. 
+
+We start by reading in the data and creating a quick stripchart:
+
+```{r,echo=FALSE}
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
+filename <- "femaleMiceWeights.csv"
+library(downloader)
+if (!file.exists(filename)) download(url, filename)
+```
+
+```{r,echo=FALSE}
+set.seed(1) #same jitter in stripchart
+```
+
+```{r bodyweight_by_diet_stripchart, fig.cap="Mice bodyweights stratified by diet."}
+dat <- read.csv("femaleMiceWeights.csv") ## previously downloaded
+par(pch = 22)
+stripchart(dat$Bodyweight ~ dat$Diet, vertical=TRUE, method="jitter",
+           main="Bodyweight over Diet",pch = 19)
+```
+
+We can see that the high fat diet group appears to have higher weights on average, although there is overlap between the two samples.
+
+For demonstration purposes, we will build the design matrix $\mathbf{X}$ using the formula `~ Diet`. The group with the 1's in the second column is determined by the level of `Diet` which comes second; that is, the non-reference level. 
+
+```{r}
+levels(dat$Diet)
+X <- model.matrix(~ Diet, data=dat)
+head(X)
+```
+
+## The Mathematics Behind lm()
+
+Before we use our shortcut for running linear models, `lm`, we want to review what will happen internally. Inside of `lm`, we will form the design matrix $\mathbf{X}$ to solve the linear equation:
+
+$$ \mathbf{Y} = \hat{\boldsymbol{\beta}}\mathbf{X} $$
+
+and calculate the $\boldsymbol{\beta}$, which minimizes the sum of squares using the previously described formula. The formula for this solution is:
+
+$$ \hat{\boldsymbol{\beta}} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{Y} $$
+
+We can calculate this in R using our matrix multiplication operator `%*%`, the inverse function `solve`, and the transpose function `t`.
+
+
+```{r}
+Y <- dat$Bodyweight
+X <- model.matrix(~ Diet, data=dat)
+solve(t(X) %*% X) %*% t(X) %*% Y
+
+solveLM = function(Y, design){
+        
+    sv =   solve(t(design) %*% design) %*% t(design) %*% Y  
+    sv
+}
+
+```
+These coefficients are the average of the control group and the difference of the averages:
+
+
+```{r}
+s <- split(dat$Bodyweight, dat$Diet)
+mean(s[["chow"]])
+mean(s[["hf"]]) - mean(s[["chow"]])
+```
+
+Finally, we use our shortcut, `lm`, to run the linear model:
+
+```{r}
+fit <- lm(Bodyweight ~ Diet, data=dat)
+summary(fit)
+(coefs <- coef(fit))
+
+# We can use the model matrix without the intercept to do the same as lm includes an offset in the function:
+
+fitY<- lm(Y ~ 0 + X)
+summary(fitY)$coefficients
+
+# For genomics data, where y can be a matrix and where each row is a gene and each column is an experimental sample. Each y is then independently fitting a gene in the rows of the matrix.
+fit.Y <-  lm.fit(x = X,y = Y)
+fit.Y$coefficients
+```
+
+**Examining the coefficients**
+
+The following plot provides a visualization of the meaning of the coefficients with colored arrows (code not shown):
+
+```{r parameter_estimate_illustration, fig.cap="Estimated linear model coefficients for bodyweight data illustrated with arrows.",echo=FALSE}
+stripchart(dat$Bodyweight ~ dat$Diet, vertical=TRUE, method="jitter",
+           main="Bodyweight over Diet", ylim=c(0,40), xlim=c(0,3),pch = 19)
+a <- -0.25
+lgth <- .1
+library(RColorBrewer)
+cols <- brewer.pal(3,"Dark2")
+abline(h=0)
+arrows(1+a,0,1+a,coefs[1],lwd=3,col=cols[1],length=lgth)
+abline(h=coefs[1],col=cols[1])
+arrows(2+a,coefs[1],2+a,coefs[1]+coefs[2],lwd=3,col=cols[2],length=lgth)
+abline(h=coefs[1]+coefs[2],col=cols[2])
+legend("right",names(coefs),fill=cols,cex=.75,bg="white")
+```
+
+To make a connection with material presented earlier, this simple linear model is actually giving us the same result (the t-statistic and p-value) for the difference as a specific kind of t-test. This is the t-test between two groups with the assumption that the population standard deviation is the same for both groups. This was encoded into our linear model when we assumed that the errors $\boldsymbol{\varepsilon}$ were all equally distributed.
+
+Although in this case the linear model is equivalent to a t-test, we will soon explore more complicated designs, where the linear model is a useful extension. Below we demonstrate that one does in fact get the exact same results:
+
+Our `lm` estimates were:
+
+```{r}
+summary(fit)$coefficients
+```
+
+**And the t-statistic  is the same:**
+
+```{r}
+ttest <- t.test(s[["hf"]], s[["chow"]], var.equal=TRUE)
+summary(fit)$coefficients[2,3]
+ttest$statistic
+```
+
+8888888888888888888888888888888888888
