@@ -1,0 +1,8 @@
+IGV download before ExploratoryAnalysis lecture
+
+experiment download before reads2counts lecture
+
+make sure counts file is in Saccharomyces folder before ExploratoryAnalysis lecture
+
+have align running in ExploratoryAnalysis lecture while walking through reads2counts lecture
+
