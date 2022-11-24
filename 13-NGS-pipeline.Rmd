@@ -874,7 +874,7 @@ mcols(gr)$qual_on_ref[[6]]
 
 Note that the sequence and quality strings are those projected to the reference so the first letter in those strings are on top of start position 13, the 2nd letter on top of position 14, etc...
 
-##Remove low frequency reads
+## Remove low frequency reads
 
 For each start position, remove reads with under-represented sequence (e.g. threshold = 20% for the data used here which is low coverage). A unique number is assigned to each unique sequence. This will make future calculations easier and a little bit faster.
 
@@ -913,7 +913,7 @@ qseq_on_ref2 <- relist(unlist(qseq_on_ref, use.names=FALSE)[tmp],
                        qseq_on_ref_id2)
 ```
 
-##Create a consensus sequence for each read group family
+## Create a consensus sequence for each read group family
 
 Compute 1 consensus matrix per chromosome:
 

@@ -1,3 +1,8 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 # FASTQC
 
 ```{r, echo = FALSE}
@@ -5,8 +10,8 @@ library(knitr)
 ```
 
 
-We are going to walk through the general steps of a Next Generation Sequencing pipeline, even though the analytical steps are beyond the scope of this course, for reasons mainlly due to the memory capacities of our laptops. The Rmd for this file can be found
-[here](https://github.com/gurinina/omic_sciences/blob/main/08-NGS-pipeline.Rmd). We can though walk through a great deal of it using small chunks of sequences and R programs. For our examples we will mainly focus on RNA-seq as that is the most manageable computationally as opposed to methylation, Chip-chip and DNA variant analysis. Its also, probably for that reason, one of the more frequently used technologies in research, likely for this reasons.
+We are going to walk through the general steps of a Next Generation Sequencing pipeline. The Rmd for this file can be found
+[here](https://github.com/gurinina/omic-sciences/blob/main/12-fastq.Rmd). We can though walk through a great deal of it using small chunks of sequences and R programs. For our examples we will mainly focus on RNA-seq as that is the most manageable computationally as opposed to methylation, Chip-chip and DNA variant analysis. Its also, probably for this reason, one of the more frequently used technologies in research.
 
 Ok, so our first files that we encounter are FASTQ...
 
@@ -16,7 +21,7 @@ The first step in NGS sequencing is to read the FASTQ files and align them. We'r
 
 First let's just look at a FASTQ file, which we can read in R using the ShortRead package
 
-reading FASTQ files in R
+Reading FASTQ files in R
 ```{r echo = FALSE,warning=FALSE,  message = FALSE}
 
 library(ShortRead)
@@ -32,7 +37,7 @@ fastqFile = file.path(qc.dir,fastqc[g])
 fq = readFastq(fastqFile)
 fq
 #class: ShortReadQ
-#length: 1885330 reads; width: 51 cycles
+#length: 10000 reads; width: 51 cycles
 
 
 reads = sread(fq)
@@ -75,15 +80,7 @@ qc_fails(qc, "sample")
 ### THIS ONE IS MOST IMPORTANT; BUT ALL OF THIS IS IN THE HTML FILE
 qc_report(qc.path=qc.dir,
           result.file="reportFile", preview = TRUE)
-fastqc = list.files(qc.dir)
-fastqcfile = file.path(qc.dir,fastqc)
 
-qc <- qc_read(fastqcfile[g])
-names(qc)
-qc_plot(qc, "Per sequence GC content")
-qc_plot(qc, "Per base sequence quality")
-qc_plot(qc, "Per sequence quality scores")
-qc_plot(qc, "Sequence duplication levels")
 
 ```
 
@@ -149,7 +146,7 @@ Here is a table of how to interpret a range of Phred Quality Scores. It is large
 
 For many purposes, a Phred Score of 20 or above is acceptable, because this means that whatever it qualifies is 99% accurate, with a 1% chance of error.
 
-|Phred Quality Score | Error	Accuracy | (1 - Error)|
+|Phred Quality Score | Probability of incorrect base call | Base call accuracy|
 |--|--|--|
 |10|10%|90%|
 |20|1%|99%|

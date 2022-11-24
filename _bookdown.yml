@@ -1,4 +1,4 @@
-book_filename: omic_sciences
+book_filename: omic-sciences
 new_session: yes
 rmd_files: ["index.Rmd","01-intro.Rmd", "02-getting-started.Rmd","03-bioconductor.Rmd",
 "04-dplyr-tutorial.Rmd","05-ggplot.Rmd","06-linear-algebra.Rmd",

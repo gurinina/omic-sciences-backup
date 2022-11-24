@@ -1,9 +1,11 @@
 # RNAseq DESeq Part III
 ```{r}
+
 library(knitr)
+
 ```
 
-The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/18-RNAseq-DESeq2_PartIII.Rmd). RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the
+The Rmd for this file can be found [here](https://github.com/gurinina/omic-sciences/blob/main/18-RNAseq-DESeq2_PartIII.Rmd). RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the
 basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).
 
 In this lab, we will focus on comparing the expression levels of genes across different samples, by counting the number of reads which overlap the exons of genes defined by a known annotation. As described in the lecture, this analysis sets aside the task
@@ -21,8 +23,9 @@ skips the alignment step, is to use fast pseudoaligners such as Sailfish, Salmon
 counting pipeline.
 
 ```{r workflow, fig.cap = "DESeq2 workflow", echo = FALSE, dpi = 40}
+
 knitr::include_graphics('18-RNAseq/de_workflow_salmon.png')
-library(knitr)
+
 ```
 
 ```{r messages=FALSE}
@@ -39,39 +42,51 @@ sample.table <- read.csv(csv.file, row.names=1)
 We now load the full *SummarizedExperiment* object, counting reads over all the genes.
 
 ```{r, message=FALSE}
+
 library(airway)
 data(airway)
 airway
+
 ```
 
 ```{r}
+
 colData(airway)
+
 ```
 
 ```{r}
+
 rowRanges(airway)
+
 ```
 
 The counts matrix is stored in `assay` of a *SummarizedExperiment*.
 
 ```{r}
+
 head(assay(airway))
+
 ```
 
 This code chunk is not necessary, but helps to make nicer plots below with large axis labels (`mypar(1,2)` can be substituted with `par(mfrow=c(1,2))` below).
 
 ```{r}
+
 # library(devtools)
-#devtools::install_github("ririzarr/rafalib")
+# devtools::install_github("ririzarr/rafalib")
 library(rafalib)
 mypar()
+
 ```
 
 Note that, on the un-transformed scale, the high count genes have high variance. That is, in the following scatter plot, the points start out in a tight cone and then fan out toward the top right. This is a general property of counts generated from
 sampling processes, that the variance typically increases with the expected value. We will explore different scaling and transformations options below.
 
 ```{r}
+
 plot(assay(airway)[,1:2], cex=.1)
+
 ```
 
 ### Creating a DESeqDataSet object
@@ -83,16 +98,20 @@ We need to specify an experimental *design* here, for later use in differential 
 the `colData`, and the `+` indicates that for differential expression analysis we want to compare levels of `dex` while controlling for the `cell` differences.
 
 ```{r}
+
 library(DESeq2)
 dds <- DESeqDataSet(airway, design= ~ cell + dex)
+
 ```
 
 We can also make a *DESeqDataSet* from a count matrix and column data.
 
 ```{r}
+
 dds.fc <- DESeqDataSetFromMatrix(assay(airway),  
                                  colData=colData(airway), 
-                                 design=~ cell + dex)
+                                 design= ~ cell + dex)
+
 ```
 
 ### Normalization for sequencing depth
@@ -100,14 +119,18 @@ dds.fc <- DESeqDataSetFromMatrix(assay(airway),
 The following estimates size factors to account for differences in sequencing depth, and is only necessary to make the `log.norm.counts` object below.
 
 ```{r}
+
 dds <- estimateSizeFactors(dds)
 sizeFactors(dds)
 colSums(counts(dds))
+par(pch=19)
 plot(sizeFactors(dds), colSums(counts(dds)))
 abline(lm(colSums(counts(dds)) ~ sizeFactors(dds) + 0))
+
 ```
 
 Size factors are calculated by the median ratio of samples to a pseudo-sample (the geometric mean of all samples). In other words, for each sample, we take the exponent of the median of the log ratios in this histogram.
+
 
 ```{r}
 loggeomeans <- rowMeans(log(counts(dds)))
@@ -125,28 +148,36 @@ sizeFactors(dds)[1]
 Make a matrix of log normalized counts (plus a pseudocount):
 
 ```{r}
+
 log.norm.counts <- log2(counts(dds, normalized=TRUE) + 1)
+
 ```
 
 Another way to make this matrix, and keep the sample and gene information is to use the function `normTransform`. The same matrix as above is stored in `assay(log.norm)`.
 
 ```{r}
+
 log.norm <- normTransform(dds)
+
 ```
 
 Examine the log counts and the log normalized counts (plus a pseudocount).
 
 ```{r}
+
 rs <- rowSums(counts(dds))
 mypar(1,2)
 boxplot(log2(counts(dds)[rs > 0,] + 1)) # not normalized
 boxplot(log.norm.counts[rs > 0,]) # normalized
+
 ```
 
 Make a scatterplot of log normalized counts against each other. Note the fanning out of the points in the lower left corner, for points less than $2^5 = 32$.
 
 ```{r}
+
 plot(log.norm.counts[,1:2], cex=.1)
+
 ```
 
 ### Stabilizing count variance
@@ -155,6 +186,7 @@ To improve the distances/clustering for the PCA and heirarchical clustering visu
 count data to shrink together the log-transformed counts for genes with very low counts. For genes with medium and high counts, the `rlog` is very close to `log2`. For further details, see the section in the DESeq2 [paper](#foot).
 
 ```{r}
+
 rld <- rlog(dds)
 
 ```
@@ -163,6 +195,7 @@ Another transformation for stabilizing variance in the *DESeq2* package is `vari
 *varianceStabilizingTransformation* is much faster when there are many samples.
 
 ```{r}
+
 vsd <- varianceStabilizingTransformation(dds)
 
 ```
@@ -187,44 +220,57 @@ df$transformation <- factor(df$transformation, levels=lvls)
 
 ggplot(df, aes(x = x, y = y)) + geom_hex(bins = 80) +
   coord_fixed() + facet_grid( . ~ transformation)  + theme_bw()
+
 ```
 
 We can examine the standard deviation of rows over the mean for the *log plus pseudocount* and the *rlog*. Note that the genes with high variance for the *log* come from the genes with lowest mean. If these genes were included in a distance calculation,
 the high variance at the low count range might overwhelm the signal at the higher count range.
 
 ```{r}
+
 library(vsn)
 meanSdPlot(log.norm.counts, ranks=FALSE) 
+
 ```
 
 For the rlog:
 
 ```{r}
+
 meanSdPlot(assay(rld), ranks=FALSE)
+
 ```
 
 For the VST:
 
 ```{r}
+
 meanSdPlot(assay(vsd), ranks=FALSE)
+
 ```
 
 The principal components (PCA) plot is a useful diagnostic for examining relationships between samples:
 
 ```{r}
+
 plotPCA(log.norm, intgroup="dex")
+
 ```
 
 Using the rlog:
 
 ```{r}
+
 plotPCA(rld, intgroup="dex")
+
 ```
 
 Using the VST:
 
 ```{r}
+
 plotPCA(vsd, intgroup="dex")
+
 ```
 
 We can make this plot even nicer using custom code from the `ggplot2` library:
@@ -233,26 +279,34 @@ We can make this plot even nicer using custom code from the `ggplot2` library:
 
 (data <- plotPCA(rld, intgroup=c("dex","cell"), returnData=TRUE))
 (percentVar =100*round(attr(data, "percentVar"),2))
+
 ```
 
 ```{r}
+
 makeLab <- function(x,pc) paste0("PC",pc,": ",x,"% variance")
+
 ggplot(data, aes(PC1,PC2,col=dex,shape=cell)) + geom_point() +
   xlab(makeLab(percentVar[1],1)) + ylab(makeLab(percentVar[2],2))
+
 ```
 
 In addition, we can plot a hierarchical clustering based on Euclidean distance matrix:
 
 ```{r fig.width=10, fig.height=5}
+
 mypar(1,2)
 plot(hclust(dist(t(log.norm.counts))), labels=colData(dds)$dex)
 plot(hclust(dist(t(assay(rld)))), labels=colData(rld)$dex)
+
 ```
 
 ## DESeq step-by-step
 
 ```{r deseq, fig.cap = "DESeq2 workflow", echo = FALSE, dpi = 40}
+
 knitr::include_graphics('18-RNAseq/deseq2_workflow_separate.png')
+
 ```
 
 Up until now, we haven't really talked about the details of the in the individual steps in the 'DESeq' function, we'll go through that today.
@@ -291,7 +345,7 @@ We will be taking a detailed look at each of these steps to better understand ho
 
 ## Step 1: Estimate size factors
 
-The first step in the differential expression analysis is to estimate the size factors, which is exactly what we already did to normalize the raw counts.
+The first step in the differential expression analysis is to estimate the size factors, which is exactly what we already did above.
 
 DESeq2 will automatically estimate the size factors when performing the differential expression analysis. However, if you have already generated the size factors using estimateSizeFactors(), as we did earlier, then DESeq2 will use these values.
 
@@ -308,7 +362,9 @@ Take a look at the total number of reads for each sample:
 Total number of raw counts per sample
 
 ```{r}
+
 colSums(counts(dds))
+
 ```
 
 How do the numbers correlate with the size factor?
@@ -318,8 +374,10 @@ Now take a look at the total depth after normalization using:
 ## Total number of normalized counts per sample
 
 ```{r}
+
 dds = estimateSizeFactors(dds)
 colSums(counts(dds, normalized=T))
+
 ```
 
 How do the values across samples compare with the total counts taken for each sample?
@@ -340,7 +398,7 @@ However, we have to back track a little bit and talk about the negative binomial
 Count data is often modeled using the binomial distribution, which can give you the probability of getting a number of heads upon tossing a coin a number of times. However, not all count data can be fit with the binomial distribution. The binomial is based on discrete events and used in situations when you have a certain number of cases.
 
 When the number of cases is very large (i.e. people who buy lottery tickets), but the probability of an event is very small (probability of winning), the Poisson distribution is used to model these types of count data. The Poisson is similar to the
-binomial, but is based on continuous events. Details provided by Rafael Irizarry in the EdX class.
+binomial, but is based on continuous events. 
 
 With RNA-Seq data, a very large number of RNAs are represented and the probability of pulling out a particular transcript is very small. Thus, it would be an appropriate situation to use the Poisson distribution. However, a unique property of this
 distribution is that the mean == variance. Realistically, with RNA-Seq data there is always some biological variation present across the replicates (within a sample class). Genes with larger average expression levels will tend to have larger observed variances across replicates.
@@ -348,7 +406,7 @@ distribution is that the mean == variance. Realistically, with RNA-Seq data ther
 If the proportions of mRNA stayed exactly constant between the biological replicates for each sample class, we could expect Poisson distribution (where mean == variance). But this doesn't happen in practice, and so the Poisson distribution is only
 considered appropriate for a single biological sample.
 
-The model that fits best, given this type of variability between replicates, is the Negative Binomial (NB) model. Essentially, the NB model is a good approximation for data where the mean \< variance, as is the case with RNA-Seq count data.
+The model that fits best, given this type of variability between replicates, is the Negative Binomial (NB) model. Essentially, the NB model is a good approximation for data where the mean < variance, as is the case with RNA-Seq count data.
 
 We use an overdispersed Poisson distribution -- called the negative binomial -- to model the *raw counts* in the count matrix. The model will include the *size factors* into account to adjust for sequencing depth. The formula will look like:
 
@@ -463,6 +521,7 @@ estimation (MLE) of the dispersion (Step 1).
 ```{r meanvar, fig.cap = "Dispersion vs normalized counts",fig.show='hold',fig.align='center', echo=FALSE}
 knitr::include_graphics(c('18-RNAseq/deseq_dispersion1.png','18-RNAseq/deseq_dispersion2.png'))
 ```
+
 ## Step 4: Shrink gene-wise dispersion estimates toward the values predicted by the curve
 
 The next step in the workflow is to shrink the gene-wise dispersion estimates toward the expected dispersion values.
@@ -501,7 +560,7 @@ A number of methods for assessing differential gene expression from RNA-seq coun
 *edgeR*, *DESeq2*, and *DSS*. Other methods, such as *limma+voom* find other ways to explicitly model the mean of log counts and the observed variance of log counts. A very incomplete list of statistical methods for RNA-seq differential expression is
 provided in the [footnotes](#foot).
 
-*DESeq2* performs a similar step to *limma* as discussed in PH525x Course 3, in using the variance of all the genes to improve the variance estimate for each individual gene. In addition, *DESeq2* shrinks the unreliable fold changes from genes with low
+*DESeq2* performs a similar step to *limma*, in using the variance of all the genes to improve the variance estimate for each individual gene. In addition, *DESeq2* shrinks the unreliable fold changes from genes with low
 counts, which will be seen in the resulting MA-plot.
 
 ### Experimental design and running DESeq2
@@ -602,7 +661,6 @@ In the LFC shrinkage code above, we specified coef="dex_trt_vs_untrt". We can al
 resultsNames(dds)
 ```
 
-For more details explaining how the shrinkage estimators differ, and what kinds of designs, contrasts and output is provided by each, see the extended section on shrinkage estimators.
 
 ```{r}
 
@@ -702,7 +760,7 @@ The `contrast` argument allows users to specify what results table should be bui
 results(dds, contrast=c("cell","N61311","N052611"))
 ```
 
-88888888888888888888888888888888888888888888888888 \### Surrogate variable analysis for RNA-seq
+## Surrogate variable analysis for RNA-seq
 
 If we suppose that we didn't know about the different cell-lines in the experiment, but noticed some structure in the counts, we could use surrograte variable analysis (SVA) to detect this hidden structure (see PH525x Course 3 for details on the
 algorithm).

@@ -1,6 +1,11 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 # Confounding
 
-The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/11-confounding.Rmd). Batch effects have the most devastating effects when they are _confounded_ with outcomes of interest. Here we describe confounding and how it relates to data interpretation.
+The Rmd for this file can be found [here](https://github.com/gurinina/omic-sciences/blob/main/11-confounding.Rmd). Batch effects have the most devastating effects when they are _confounded_ with outcomes of interest. Here we describe confounding and how it relates to data interpretation.
 
 "Correlation is not causation" is one of the most important lessons you should take from this or any other data analysis course. A common example for why this statement is so often true is confounding. Simply stated confounding occurs when we observe a correlation or association between $X$ and $Y$, but  this is strictly the result of both $X$ and $Y$ depending on an extraneous variable $Z$. Here we describe Simpson's paradox, a phenomenon in probability and statistics in which a trend appears in several groups of data but disappears or reverses when the groups are combined. 
 
@@ -16,7 +21,6 @@ Simpson's Paradox is commonly seen in baseball statistics. Here is a well known 
 
 The confounder here is games played. Jeter played more games during the year he batted better, while the opposite is true for Justice.
 
-<a name="genomics"></a>
 
 ## Confounding: Very Simple Example
 
@@ -74,7 +78,7 @@ print(tab)
 
 In response to this paper, Akey, Biswas, Leek and Storey (Leek and Storey are heavy hitters in R bioinformatics and the microarray world) wrote a letter to the [Nature Genetics editor](https://pubmed.ncbi.nlm.nih.gov/17597765/): Spielman et al.(1) estimate the number of genes differentially expressed between individuals of European (CEU) and Asian (ASN) ancestry and suggest that these differences can be accounted for by measured genetic variants. We recently performed a similar study comparing differences in gene expression among individuals of European and Yoruban ancestry(2). Given the scientific, medical and societal implications of this research area, it is important for the scientific community to carefully revisit and critically evaluate the conclusions of such studies. To this end, we have reanalyzed the data in Spielman et al.(1) to provide a common basis for comparison with our study. In doing so, we found that important issues arise about the accuracy of their results. 
 
-Spielman et al categorized genes as differentially expressed if they had P-values <1e-5, corresponding to a Sidak corrected P-value <0.05 for multiple hypothesis tests. At this significance threshold, they report that approximately 26% of genes are differentially expressed between the CEU and ASN samples (ASN denotes the combined HapMap Beijing Chinese (CHB) and Japanese (JPT) HapMap individuals). As a Sidak correction is similar to a Bonferroni correction, the proportion of genes found to be significant is a conservative estimate of the true overall proportion of differentially expressed genes. A more widely used and less conservatively biased approach is to analyze the complete distribution of P-values, which provides a lower bound estimate of the proportion of truly differentially expressed genes (3,4). Applying this methodology to the distribution of P-values obtained by P-values obtained by t tests on genes expressed in lymphoblastoid cell lines as defined in Spielman et al.(1), we estimate that at least 78% of these genes are differentially expressed between the CEU and ASN samples. 
+Spielman et al categorized genes as differentially expressed if they had P-values <1e-5, corresponding to a Sidak corrected P-value <0.05 for multiple hypothesis tests. At this significance threshold, they report that approximately 26% of genes are differentially expressed between the CEU and ASN samples (ASN denotes the combined HapMap Beijing Chinese (CHB) and Japanese (JPT) HapMap individuals). As a Sidak correction is similar to a Bonferroni correction, the proportion of genes found to be significant is a conservative estimate of the true overall proportion of differentially expressed genes. A more widely used and less conservatively biased approach is to analyze the complete distribution of P-values, which provides a lower bound estimate of the proportion of truly differentially expressed genes (3,4). Applying this methodology to the distribution ofP-values obtained by t tests on genes expressed in lymphoblastoid cell lines as defined in Spielman et al.(1), we estimate that at least 78% of these genes are differentially expressed between the CEU and ASN samples. 
 
 Figure 3. Distribution of P-values for tests of differential expression. (a) P-values resulting from tests of P-values resulting from tests of P differential expression between the CEU and ASN samples. 
 
@@ -305,7 +309,7 @@ To illustrate the confounding, we will pick some genes to show in a heatmap plot
 ```{r image_of_subset, fig.cap="Image of gene expression data for genes selected to show difference in group as well as the batch effect, along with some randomly chosen genes.", message=FALSE, echo=FALSE}
 library(rafalib)
 library(RColorBrewer)
-
+library(genefilter)
 
 batch <- factor(format(sampleInfo$date,"%m"))
 
@@ -331,8 +335,7 @@ axis(1,1:24,month,cex.axis=0.5)
 
 In the plot above, the first 12 columns are females (1s) and the last 12 columns are males (0s). We can see some Y chromosome genes towards the top since they are blue for females and red from males. We can also see some genes that correlate with month towards the bottom of the image. Some genes are low in June (6) and high in October (10), while others do the opposite. The month effect is not as clear as the sex effect, but it is certainly present.  
 
-In what follows, we will imitate the typical analysis we would do in practice. We will act as if we don't know which genes are supposed to be differentially expressed between males and females, find genes that are differentially expressed, and the evaluate these methods by comparing to what we expect to be correct. Note while in the plot we only show a few genes, for the analysis we analyze 
-all 8,793.
+In what follows, we will imitate the typical analysis we would do in practice. We will act as if we don't know which genes are supposed to be differentially expressed between males and females, find genes that are differentially expressed, and the evaluate these methods by comparing to what we expect to be correct. Note while in the plot we only show a few genes, for the analysis we analyze all 8,793.
 
 
 Assessment plots and summaries

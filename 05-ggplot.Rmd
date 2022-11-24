@@ -1,4 +1,3 @@
-
 # Data visualisation with ggplot2
 
 ```{r}
@@ -111,7 +110,7 @@ Geoms can be roughly divided into individual and collective geoms. An __individu
 
 By default, the `group` aesthetic is mapped to the interaction of all discrete variables in the plot. This often partitions the data correctly, but when it does not, or when no discrete variable is used in a plot, you'll need to explicitly define the grouping structure by mapping group to a variable that has a different value for each group.
 
-## Matching aesthetics to graphic objects {#matching}
+## Matching aesthetics to graphic objects
 
 An important issue with collective geoms is how the aesthetics of the individual observations are mapped to the aesthetics of the complete entity. What happens when different aesthetics are mapped to a single geometric element? \index{Aesthetics!matching to geoms}
 
@@ -183,7 +182,7 @@ knitr::include_graphics("figure/diamond-dimensions.png", dpi = 300)
 
 The dataset has not been well cleaned, so as well as demonstrating interesting facts about diamonds, it also shows some data quality problems. 
 
-## Displaying distributions {#distributions}
+## Displaying distributions 
 
 There are a number of geoms that can be used to display distributions, depending on the dimensionality of the distribution, whether it is continuous or discrete, and whether you are interested in the conditional or joint distribution. \index{Distributions}
 

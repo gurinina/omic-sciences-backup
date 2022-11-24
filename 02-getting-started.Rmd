@@ -5,6 +5,7 @@
 library(knitr)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 ```
+
 In this book we will be using the
 [R programming language](https://cran.r-project.org/) for all our
 analysis. The Rmd file for this code is available 
@@ -245,17 +246,23 @@ To clone this course repository so that you get your own copy in Rstudio, you cr
 
 In RStudio, start a new Project:
 
-File > New Project > Version Control > Git. In the “repository URL” paste the URL of your new GitHub repository. Paste in https://github.com/gurinina/omic_sciences
-Be intentional about where you create this Project.
-I suggest you “Open in new session”.
+File > New Project > Version Control > Git. In the “repository URL” paste the URL of your new GitHub repository. Paste in https://github.com/gurinina/genomics
+Be intentional about where you create this Project. You should make a folder where you keep all of your RProjects, for example, your home directory /Users/your username/Documents/RProjects is a good one.
+
 Click “Create Project” to create a new directory, which will be all of these things:
 a directory or “folder” on your computer
 a Git repository, linked to a remote GitHub repository
 and an RStudio Project.
 
-This should copy all of be the course material into this project and should be all you need for the course. Homework assignments will be posted on Canvas on a weekly basis.
+If you click create project as a subfolder of the /Users/your username/Documents/RProjects/ directory it will be all those things.
 
-The published book version of the Rmd files for the course is available [here](https://bookdown.org/ggiaever/omic_sciences/).
+This should copy all of be the course material into this project for the next three sections. 
+
+The published book version of the Rmd files for the next three sections of the course are available
+[here](https://bookdown.org/ggiaever/shell-genomics/),
+[here](https://bookdown.org/ggiaever/wrangling-genomics/) and
+[here](https://bookdown.org/ggiaever/RNA-genomics/).
+
 
 
 

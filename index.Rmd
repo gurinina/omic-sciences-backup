@@ -38,11 +38,3 @@ We focus on the practical challenges faced by data analysts in the life sciences
 
 The best reference for rmarkdown documents is [R Markdown Cookbook](https://bookdown.org/yihui/rmarkdown-cookbook/).
 
-```{r include=FALSE}
-# automatically create a bib database for R packages
-knitr::write_bib(c(
-  .packages(), 'bookdown', 'knitr', 'rmarkdown'
-), 'packages.bib')
-```
-
-
